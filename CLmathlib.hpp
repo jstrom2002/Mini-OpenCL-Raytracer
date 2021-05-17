@@ -13,7 +13,7 @@ const float MATH_1DIV2PI = 0.159154943f;
 const float MATH_PIDIV2 = 1.570796327f;
 const float MATH_PIDIV4 = 0.785398163f;
 
-struct Triangle;
+struct CLTriangle;
 
 class float3
 {
@@ -21,7 +21,8 @@ public:
     float3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
     float3(float val) : x(val), y(val), z(val) {}
     float3() : x(0), y(0), z(0) {}
-    float3(glm::vec3 v) : x(v.x), y(v.y), z(v.z){}
+    //float3(glm::vec3 v) : x(v.x), y(v.y), z(v.z){}
+    //float3(glm::vec4 v) : x(v.x), y(v.y), z(v.z){}
 
     glm::vec3 toGLM() { return glm::vec3(x, y, z); }
     float  Length()    const { return sqrt(x*x + y*y + z*z); }
@@ -59,6 +60,9 @@ public:
     float2(float x, float y) : x(x), y(y) {}
     float2(float val) : x(val), y(val) {}
     float2() : x(0), y(0) {}
+    //float2(glm::vec2 v) : x(v.x), y(v.y) {}
+    //float2(glm::vec3 v) : x(v.x), y(v.y) {}
+    //float2(glm::vec4 v) : x(v.x), y(v.y) {}
 
     float Length() const { return sqrt(x*x + y*y); }
     float2 Normalize() const { return float2(x / Length(), y / Length()); }
@@ -113,10 +117,10 @@ inline float3 Max(const float3 &a, const float3 &b)
     return float3(std::max(a.x, b.x), std::max(a.y, b.y), std::max(a.z, b.z));
 }
 
-struct Bounds3
+struct CLBounds3
 {
 public:
-    Bounds3()
+    CLBounds3()
     {
         float minNum = std::numeric_limits<float>::lowest();
         float maxNum = std::numeric_limits<float>::max();
@@ -124,11 +128,11 @@ public:
         max = float3(minNum, minNum, minNum);
     }
 
-    Bounds3(float3 p) :
+    CLBounds3(float3 p) :
         min(p), max(p)
     {}
 
-    Bounds3(float3 p1, float3 p2) :
+    CLBounds3(float3 p1, float3 p2) :
         min(Min(p1, p2)),
         max(Max(p1, p2))
     {}
@@ -175,7 +179,7 @@ public:
         return o;
     }
 
-    bool Intersects(const Triangle &triangle) const;
+    bool Intersects(const CLTriangle &triangle) const;
     void Project(float3 axis, float &mins, float &maxs) const;
 
 public:
@@ -183,17 +187,17 @@ public:
     float3 max;
 };
 
-inline Bounds3 Union(const Bounds3 &b, const float3 &p)
+inline CLBounds3 Union(const CLBounds3 &b, const float3 &p)
 {
-    Bounds3 ret;
+    CLBounds3 ret;
     ret.min = Min(b.min, p);
     ret.max = Max(b.max, p);
     return ret;
 }
 
-inline Bounds3 Union(const Bounds3 &b1, const Bounds3 &b2)
+inline CLBounds3 Union(const CLBounds3 &b1, const CLBounds3 &b2)
 {
-    Bounds3 ret;
+    CLBounds3 ret;
     ret.min = Min(b1.min, b2.min);
     ret.max = Max(b1.max, b2.max);
     return ret;

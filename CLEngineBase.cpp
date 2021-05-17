@@ -2,6 +2,8 @@
 #include "stdafx.h"
 #include "CLRaytracer.h"
 #include "CLBVHnode.h"
+#include "CLOBJloader.h"
+#include "CLmathlib.hpp"
 #include <exception>
 
 namespace Glaze3D
@@ -42,7 +44,7 @@ namespace Glaze3D
         glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);//<== wont work with renderdoc
         glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, true);
         glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, true);
-        glfwWindowHint(GLFW_DECORATED, false);
+        glfwWindowHint(GLFW_DECORATED, true);
         glfwSwapInterval(0); // Enable vsync.
 
         // Create window.
@@ -132,6 +134,27 @@ namespace Glaze3D
     {
         if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
             windowClose = true;        
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        {
+            eng->camera.position += eng->camera.front;
+            eng->render->m_FrameCount = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        {
+            eng->camera.position -= eng->camera.front;
+            eng->render->m_FrameCount = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        {
+            //eng->camera.position -= Cross(eng->camera.front, eng->camera.up);
+            eng->render->m_FrameCount = 1;
+        }
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        {
+            //eng->camera.position += Cross(eng->camera.front, eng->camera.up);
+            eng->render->m_FrameCount = 1;
+        }
+
     }
 
     void CLEngineBase::renderLoop()
@@ -141,8 +164,16 @@ namespace Glaze3D
         try 
         {
             render->Init();
-            eng->render->m_Scene = std::make_shared<BVHScene>();
-            eng->render->m_Scene->Load("cornell.obj", 4);
+            eng->render->m_Scene = std::make_shared<CLBVHScene>();
+            CLOBJloader obj;
+            int maxPrimitives = 4;
+            obj.Load(
+                "cornell.obj"
+                //"C:\\assets\\obj\\sibenik\\sibenik.obj"
+                //"C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\city.obj"
+                //"C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\dragon.obj"
+                , maxPrimitives);
+            eng->render->m_Scene->CreateBVHTrees(maxPrimitives);
         }
         catch (std::exception& ex) 
         {

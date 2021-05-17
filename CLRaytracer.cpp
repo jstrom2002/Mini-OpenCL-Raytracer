@@ -4,6 +4,7 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "CLBVHnode.h"
 #include "CLutils.h"
+#include "CLmathlib.hpp"
 
 namespace Glaze3D
 {
@@ -26,6 +27,21 @@ namespace Glaze3D
         unsigned int seed = rand();
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_COUNT, m_FrameCount);
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_SEED, seed);
+
+        //float3 val = float3(eng->camera.position);
+        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_POS, val);
+        //val = float3(eng->camera.front);
+        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_FRONT, val);
+        //val = float3(eng->camera.up);
+        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_UP, val);
+
+        float3 val = float3(0.0f, -25.0f, 8.5f);
+        eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_POS, val);
+        val = float3(0.0f, 1.0f, 0.0f);
+        eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_FRONT, val);
+        val = float3(0.0f, 0.0f, 1.0f);
+        eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_UP, val);
+
 
         // Execute kernel code, copy output to viewport pixels.
         unsigned int globalWorksize = eng->window_width * eng->window_height;
@@ -52,7 +68,7 @@ namespace Glaze3D
         glUseProgram(eng->shaderID);
         glActiveTexture(GL_TEXTURE0);
         glBindTexture(GL_TEXTURE_2D, outputTexture);
-        basicShapes.drawQuad();
+        eng->basicShapes.drawQuad();
         glBindTexture(GL_TEXTURE_2D, 0);
 
         // Swap buffers, end render.
@@ -66,7 +82,8 @@ namespace Glaze3D
         cl::Platform::get(&all_platforms);
         if (all_platforms.empty())
         {
-            throw std::exception("No OpenCL platforms found");
+            throw std::exception();//String argument is an MSVC only extension
+            //throw std::exception("No OpenCL platforms found");
         }
 
         m_CLContext = std::make_shared<CLContext>(all_platforms[0]);

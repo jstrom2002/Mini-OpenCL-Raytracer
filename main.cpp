@@ -6,4 +6,5 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, PWSTR pCmdLine
 {
 	Glaze3D::eng = std::make_shared<Glaze3D::CLEngineBase>();
 	Glaze3D::eng->renderLoop();
+	return 0;
 }

@@ -18,7 +18,10 @@ namespace Glaze3D
         HEIGHT,
         FRAME_COUNT,
         FRAME_SEED,
-        LIGHT_BOUNCES
+        LIGHT_BOUNCES,
+        CAMERA_POS,
+        CAMERA_FRONT,
+        CAMERA_UP
     };
 
     inline const char* GetClErrorString(int error)
@@ -103,7 +106,8 @@ namespace Glaze3D
     {
     public:
         CLException(const std::string& message, int errorCode)
-            : std::exception((message + " (" + GetClErrorString(errorCode) + ")").c_str()) {}
+            : std::exception() {}
+            //: std::exception((message + " (" + GetClErrorString(errorCode) + ")").c_str()) {}
 
     };
 

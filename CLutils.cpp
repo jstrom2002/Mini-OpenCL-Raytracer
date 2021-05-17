@@ -19,7 +19,8 @@ namespace Glaze3D
         std::vector<cl::Device> platform_devices;
         platform.getDevices(CL_DEVICE_TYPE_ALL, &platform_devices);
         if (platform_devices.empty())        
-            throw std::exception("No devices found!");        
+            throw std::exception();//String argument is an MSVC only extension
+            //throw std::exception("No devices found!");
         cl_int errCode;
         m_Context = cl::Context(platform_devices, props, 0, 0, &errCode);
         if (errCode)        
@@ -48,7 +49,8 @@ namespace Glaze3D
     {
         std::ifstream input_file(filename);
         if (!input_file)        
-            throw std::exception("Failed to load kernel file!");        
+            throw std::exception();//String argument is an MSVC only extension
+            //throw std::exception("Failed to load kernel file!");
         std::string source((std::istreambuf_iterator<char>(input_file)), (std::istreambuf_iterator<char>()));
         cl::Program program(eng->render->m_CLContext->GetContext(), source);
         cl_int errCode = program.build(devices, " -I . ");
