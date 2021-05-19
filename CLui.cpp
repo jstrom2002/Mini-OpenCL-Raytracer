@@ -274,12 +274,13 @@ namespace Glaze3D
             if (isPaused)
                 if (ImGui::Button("Unpause##unpause main menu"))
                 {
-                    isPaused = !isPaused;
+                    isPaused = false;
+                    framestepOn = false;
                 }
             if (!isPaused)
                 if (ImGui::Button("Pause##pause main menu"))
                 {
-                    isPaused = !isPaused;
+                    isPaused = true;
                 }
 
             if (ImGui::Button("Update"))
@@ -290,7 +291,7 @@ namespace Glaze3D
             if (ImGui::Button("Next Frame"))
             {
                 framestepOn = true;
-                isPaused = false;
+                isPaused = true;
             }
 
             if (isPaused)
@@ -320,7 +321,6 @@ namespace Glaze3D
             if (ImGui::DragFloat3("Camera Position", glm::value_ptr(o), 0.01, 9999, 9999))
             {
                 eng->m_Camera.position = o;
-                //eng->m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 
@@ -329,44 +329,42 @@ namespace Glaze3D
             {
                 eng->m_Camera.pitch = r.x;
                 eng->m_Camera.yaw = r.y;
-                //eng->m_Camera.m_Changed = true;
                 eng->m_Camera.Update();
                 eng->render->m_FrameCount = 0;
             }
 
             if (ImGui::DragFloat3("Light Position", glm::value_ptr(eng->m_Light.position), 0.01, -9999, 9999))
             {
-                //m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 
             if (ImGui::DragFloat("Light Intensity", &eng->m_Light.intensity, 0.01, 0.0, 9999))
             {
-                //m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 
             if (ImGui::DragFloat("Skybox Intensity", &eng->render->skyboxIntensity, 0.01, 0.0, 9999))
             {
-                //m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 
             if (ImGui::DragFloat("Light Attenuation", &eng->m_Light.attenuation, 0.01, 0.001, 9999))
             {
-                //m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 
-            if (ImGui::DragInt("Light Bounces", &eng->render->lightBounces, 1, 1, 20))
+            if (ImGui::SliderInt("Light Bounces", &eng->render->lightBounces, 1, 20))
             {
-                //m_Camera->m_Changed = true;
+                eng->render->m_FrameCount = 0;
+            }
+
+            if (ImGui::SliderInt("Light Type", &eng->render->lightType, 0, 2))
+            {
                 eng->render->m_FrameCount = 0;
             }
 
             if (ImGui::SliderInt("DOF On", &eng->render->dofOn, 0, 1))
             {
-                //m_Camera->m_Changed = true;
                 eng->render->m_FrameCount = 0;
             }
 

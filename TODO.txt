@@ -1,6 +1,11 @@
 TO DO
 ======
+- resolve issues with sending uniforms to renderer for 'dragon.obj', etc. (esp lightType/skyboxIntensity/etc)
+- figure out how to find 'CL_DEVICE_MAX_CONSTANT_ARGS' from 'clDeviceInfo' to determine the max number of kernel
+arguments (see: CLutils.cpp)
 - impl 'framestepOn'
+- impl light attenuation, position, direction
+- impl HDR skybox again
 - fix camera controls UI
 - add a single light and camera class to the new CLscene object
 - write code to load scene from file using ASSIMP

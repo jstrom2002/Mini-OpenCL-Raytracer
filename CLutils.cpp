@@ -15,7 +15,8 @@ namespace Glaze3D
             CL_WGL_HDC_KHR, (cl_context_properties)wglGetCurrentDC(),
             0
         };
-
+        
+        // Find device, platform for OpenCL renderer.
         std::vector<cl::Device> platform_devices;
         platform.getDevices(CL_DEVICE_TYPE_ALL, &platform_devices);
         if (platform_devices.empty())        
@@ -27,7 +28,10 @@ namespace Glaze3D
             throw CLException("Failed to create context", errCode);        
         m_Queue = cl::CommandQueue(m_Context, platform_devices[0], 0, &errCode);
         if (errCode)        
-            throw CLException("Failed to create queue", errCode);        
+            throw CLException("Failed to create queue", errCode);  
+
+        //// Get info from this device now, esp max number of kernel args.
+        //platform_devices[0].getInfo();
     }
 
     void CLContext::ReadBuffer(const cl::Buffer& buffer, void* data, size_t size) const

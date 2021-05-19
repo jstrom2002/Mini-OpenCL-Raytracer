@@ -28,6 +28,7 @@ namespace Glaze3D
 
         // Renderer values.
         unsigned int m_FrameCount = 1;
+        int lightType = 0;
         int lightBounces = 9;
         int dofOn = 0;
         float skyboxIntensity = 1.0f;

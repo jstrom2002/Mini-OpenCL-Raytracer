@@ -35,6 +35,7 @@ namespace Glaze3D
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_COUNT, m_FrameCount);
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_SEED, seed);
         eng->render->SetUniform<int>((int)RenderKernelArgument_t::LIGHT_BOUNCES, lightBounces);
+        eng->render->SetUniform<int>((int)RenderKernelArgument_t::LIGHT_TYPE, lightType);
         eng->render->SetUniform<float>((int)RenderKernelArgument_t::SKYBOX_INTENSITY, skyboxIntensity);
 
         float3 val = float3(eng->m_Camera.position);
@@ -53,6 +54,8 @@ namespace Glaze3D
             eng->render->m_CLContext->ReadBuffer(m_OutputBuffer, pixels.data(), sizeof(float3) * globalWorksize);
             eng->render->m_CLContext->Finish();
 
+            if (eng->ui->framestepOn)
+                eng->ui->isPaused = true;
             eng->ui->framestepOn = false;
         }
 

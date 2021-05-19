@@ -19,6 +19,7 @@ namespace Glaze3D
         FRAME_COUNT,
         FRAME_SEED,
         LIGHT_BOUNCES,
+        LIGHT_TYPE,
         SKYBOX_INTENSITY,
         CAMERA_POS,
         CAMERA_FRONT,

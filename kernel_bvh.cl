@@ -32,6 +32,7 @@ typedef struct
     __global CLLinearBVHNode* nodes;
     __global CLMaterial* materials;
     unsigned int lightBounces;
+    int lightType;
     float skyboxIntensity;
     float3 cameraPos;
     float3 cameraFront;
@@ -53,15 +54,20 @@ Ray InitRay(float3 origin, float3 dir)
     return r;
 }
 
-unsigned int HashUInt32(unsigned int x){
+unsigned int HashUInt32(unsigned int x) {
     return 1103515245 * x + 12345;
 }
-
+unsigned int hash(unsigned int* x) {
+    *x ^= *x >> 16;
+    *x *= 0x7feb352dU;
+    *x ^= *x >> 15;
+    *x *= 0x846ca68bU;
+    *x ^= *x >> 16;
+    return *x;
+}
 float GetRandomFloat(unsigned int* seed)
 {
-    *seed = (*seed << 13) ^ *seed;
-    *seed = (*seed * (*seed * *seed * 15731 + 789221) + 1376312589) & 0x7fffffff;
-    return (float)(*seed / 2000000000.0f);
+    return (float)(hash(seed)) / (float)(0xffffffffU);
 }
 
 
@@ -300,7 +306,6 @@ float3 lightPixel(Ray* ray, const Scene* scene, const IntersectData* isect)
     // Light properties.
     float3 lightPosition = (float3)(0.0f, -10.0f, 16.0f);
     float3 lightDirection = (float3)(-0.5f, 0.4f, -0.1f);
-    int lightType = 0;
     float lightIntensity = 1.0f;
     
     // Lighting calc vals.
@@ -308,13 +313,13 @@ float3 lightPixel(Ray* ray, const Scene* scene, const IntersectData* isect)
     float attn = 1.0f;
     float3 L, X;
 
-    if (lightType == 0)// Directional light.
+    if (scene->lightType <= 0)// Directional light.
     {
         // Calculate N*L.
         L = -lightDirection;
         NdotL = max(dot(isect->normal, L), 0.0f);
     }
-    else if (lightType == 1)// Point light.
+    else if (scene->lightType == 1)// Point light.
     {
         lightIntensity = 16.0f;
         float lightFalloff = 0.8f;
@@ -329,7 +334,7 @@ float3 lightPixel(Ray* ray, const Scene* scene, const IntersectData* isect)
         float d = sqrt(dot(eye, eye));
         attn = 1.0 / (lightFalloff * (d * d));//quadratic attenuation.
     }
-    else if (lightType == 2)// Spot light.
+    else if (scene->lightType >= 2)// Spot light.
     {
         X = ray->origin + ray->dir * isect->t;
         L = lightPosition - X;
@@ -418,10 +423,11 @@ __kernel void KernelEntry
     unsigned int frameCount,//6
     unsigned int frameSeed,//7
     int lightBounces,//8
-    float skyboxIntensity,//8
-    float3 cameraPos,//9
-    float3 cameraFront,//10
-    float3 cameraUp//11
+    int lightType,//9
+    float skyboxIntensity,//10
+    float3 cameraPos,//11
+    float3 cameraFront,//12
+    float3 cameraUp//13
 )
 {
     Scene scene = { 
@@ -429,6 +435,7 @@ __kernel void KernelEntry
         nodes, 
         materials,
         lightBounces,
+        lightType,
         skyboxIntensity,
         cameraPos,
         cameraFront,
@@ -441,7 +448,9 @@ __kernel void KernelEntry
 
     if (frameCount == 0)
         result[get_global_id(0)] = pow(radiance, 0.45454545f);
-    else    
-        result[get_global_id(0)] = ToGamma((FromGamma(result[get_global_id(0)])
-            * (frameCount - 1) + radiance) / frameCount);    
+    else
+    {
+        result[get_global_id(0)] = ToGamma(
+            (FromGamma(result[get_global_id(0)]) * (frameCount - 1) + radiance) / frameCount);
+    }
 }

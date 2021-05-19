@@ -174,10 +174,10 @@ namespace Glaze3D
             CLOBJloader obj;
             int maxPrimitives = 4;
             obj.Load(
-                "cornell.obj"
+                //"cornell.obj"
                 //"C:\\assets\\obj\\sibenik\\sibenik.obj"
                 //"C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\city.obj"
-                //"C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\dragon.obj"
+                "C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\dragon.obj"
                 , maxPrimitives);
             eng->render->m_Scene->CreateBVHTrees(maxPrimitives);
         }
