@@ -2,7 +2,7 @@
 #include "CLshared_structs.hpp"
 #include <CL/cl2.hpp>
 
-bool Bounds3::Intersects(const Triangle &triangle) const
+bool CLBounds3::Intersects(const CLTriangle &triangle) const
 {
     float3 boxNormals[3] = {
         float3(1.0f, 0.0f, 0.0f),
@@ -61,7 +61,7 @@ bool Bounds3::Intersects(const Triangle &triangle) const
     return true;
 }
 
-void Bounds3::Project(float3 axis, float &mins, float &maxs) const
+void CLBounds3::Project(float3 axis, float &mins, float &maxs) const
 {
     mins = CL_FLT_MAX;
     maxs = -CL_FLT_MAX;

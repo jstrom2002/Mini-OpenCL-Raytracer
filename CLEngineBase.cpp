@@ -4,7 +4,11 @@
 #include "CLBVHnode.h"
 #include "CLOBJloader.h"
 #include "CLmathlib.hpp"
+#include "CLcamera.h"
+#include "CLui.h"
 #include <exception>
+#include "imgui_internal.h"
+
 
 namespace Glaze3D
 {
@@ -13,10 +17,12 @@ namespace Glaze3D
 		render = std::make_shared<CLRaytracer>();
 	}
 
-    void CLEngineBase::initialize()
+    void CLEngineBase::init()
     {
         if (isInitialized)
             return;
+
+        ui = std::make_shared<CLui>();
 
         // Create context and window.
         glfwInit();
@@ -28,9 +34,9 @@ namespace Glaze3D
 
         // Get fullscreen width/height.
         GLFWmonitor* monitor = glfwGetPrimaryMonitor();
-        const GLFWvidmode* mode = glfwGetVideoMode(monitor);
-        window_width = mode->width;
-        window_height = mode->height;
+        const GLFWvidmode* mode = glfwGetVideoMode(monitor);        
+        ui->window_width = mode->width;
+        ui->window_height = mode->height;
 
         // Set hints to allow AA samples and double buffering.
         glfwWindowHint(GLFW_RED_BITS, mode->redBits);
@@ -48,7 +54,7 @@ namespace Glaze3D
         glfwSwapInterval(0); // Enable vsync.
 
         // Create window.
-        window = glfwCreateWindow(window_width, window_height, "", nullptr, nullptr);
+        window = glfwCreateWindow(ui->window_width, ui->window_height, "", nullptr, nullptr);
         glfwMakeContextCurrent(window);
         if (window == NULL) {
             std::cout << "Failed to create GLFW window" << std::endl;
@@ -60,7 +66,8 @@ namespace Glaze3D
         glewExperimental = true;
         glewInit();
         glfwMakeContextCurrent(eng->window);
-        glfwGetWindowSize(window, &window_width, &window_height);
+        glfwGetWindowSize(window, &ui->window_width, &ui->window_height);
+        m_hWnd = glfwGetWin32Window(window);
 
         // Init shader.
         const char* vertex_shader =
@@ -124,34 +131,33 @@ namespace Glaze3D
         // delete the shaders as they're linked into our program now and no longer necessery
         glDeleteShader(vertHandle);
         glDeleteShader(fragHandle);
-
         glUseProgram(shaderID);
+
+        ui->init();
 
         isInitialized = true;
     }
 
     void CLEngineBase::processInput()
     {
-        if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            windowClose = true;        
-        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_UP) == GLFW_PRESS)
         {
-            eng->camera.position += eng->camera.front;
+            eng->m_Camera.position += eng->m_Camera.front;
             eng->render->m_FrameCount = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_DOWN) == GLFW_PRESS)
         {
-            eng->camera.position -= eng->camera.front;
+            eng->m_Camera.position -= eng->m_Camera.front;
             eng->render->m_FrameCount = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_LEFT) == GLFW_PRESS)
         {
-            //eng->camera.position -= Cross(eng->camera.front, eng->camera.up);
+            eng->m_Camera.position -= glm::cross(eng->m_Camera.front, eng->m_Camera.up);
             eng->render->m_FrameCount = 1;
         }
-        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        if (glfwGetKey(window, GLFW_KEY_RIGHT) == GLFW_PRESS)
         {
-            //eng->camera.position += Cross(eng->camera.front, eng->camera.up);
+            eng->m_Camera.position += glm::cross(eng->m_Camera.front, eng->m_Camera.up);
             eng->render->m_FrameCount = 1;
         }
 
@@ -159,7 +165,7 @@ namespace Glaze3D
 
     void CLEngineBase::renderLoop()
     {
-        initialize();
+        init();
 
         try 
         {
@@ -181,10 +187,17 @@ namespace Glaze3D
             return;
         }
 
-        while (!eng->windowClose){
+
+
+        // ================
+        // MAIN RENDER LOOP 
+        // ================
+        while (!eng->windowClose && !glfwWindowShouldClose(eng->window)) {
             float currentFrame = clock();
             deltaTime = currentFrame - lastFrame;
             lastFrame = currentFrame;
+            FPS = float(CLOCKS_PER_SEC) / deltaTime;
+
             glfwPollEvents();
             processInput();
 
@@ -197,6 +210,17 @@ namespace Glaze3D
                 MessageBox(0, std::string("Caught exception: " + std::string(ex.what())).c_str(), 0, 0);
                 return;
             }
+        }
+
+
+        // Shutdown ImGui.
+        eng->ui->terminate();
+        ImGui_ImplGlfw_Shutdown();
+        ImGuiContext* g = ImGui::GetCurrentContext();
+        if (g)
+        {
+            ImGui::Shutdown(g);
+            ImGui::DestroyContext();
         }
     }
 }

@@ -1,0 +1,15 @@
+TO DO
+======
+- impl 'framestepOn'
+- fix camera controls UI
+- add a single light and camera class to the new CLscene object
+- write code to load scene from file using ASSIMP
+- import code to register hits on both sides of a tri
+- create a 'CLmodel' object with CLBounds3 for its bbox
+
+DONE
+====
+- change all class names to 'CLxxx' to prevent naming collision
+--- change Ray to CLRay
+- create 'CLscene' class
+

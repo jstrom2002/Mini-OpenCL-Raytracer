@@ -19,6 +19,7 @@ namespace Glaze3D
         FRAME_COUNT,
         FRAME_SEED,
         LIGHT_BOUNCES,
+        SKYBOX_INTENSITY,
         CAMERA_POS,
         CAMERA_FRONT,
         CAMERA_UP
@@ -106,8 +107,8 @@ namespace Glaze3D
     {
     public:
         CLException(const std::string& message, int errorCode)
-            : std::exception() {}
-            //: std::exception((message + " (" + GetClErrorString(errorCode) + ")").c_str()) {}
+            //: std::exception() {} //<== use this version of the code to prevent calling std::excpetion for GCC compiler
+            : std::exception((message + " (" + GetClErrorString(errorCode) + ")").c_str()) {}
 
     };
 

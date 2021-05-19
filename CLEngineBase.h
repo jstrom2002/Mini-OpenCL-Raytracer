@@ -1,25 +1,18 @@
 #pragma once
 #include "stdafx.h"
 #include <memory>
+#include "CLCamera.h"
+#include "CLLight.h"
 
 namespace Glaze3D
 {
     class CLRaytracer;
+    class CLui;
 
     // Helper class for demo code, delete in release.
     class CLEngineBase 
     {
     public:
-        struct Camera
-        {
-            glm::vec3 position = glm::vec3(0.0f, -25.0f, 8.5f);
-            glm::vec3 front = glm::vec3(0.0f, -1.0f, 0.0f);
-            glm::vec3 up = glm::vec3(0.0f, 0.0f, 1.0f);
-            float pitch = 1.571f;
-            float yaw = 1.571f;
-        };
-        Camera camera;
-
         class BasicShapes
         {
         public:
@@ -79,23 +72,24 @@ namespace Glaze3D
 
         bool isInitialized = false;
         bool windowClose = false;
-        int window_width = 1280;
-        int window_height = 720;
         float lastFrame = 0;
         float deltaTime = 0;
+        float FPS = 0;
         GLFWwindow* window = nullptr;
         std::shared_ptr<CLRaytracer> render = nullptr;
+        std::shared_ptr<CLui> ui = nullptr;
+        CLCamera m_Camera;
+        CLLight m_Light;
 
-        double m_StartFrameTime;
-        double m_PreviousFrameTime;
+        HWND m_hWnd;//HWND is used by CLui
         HGLRC m_GLContext;
 
         CLEngineBase();
-        void initialize();
+        void init();
         void processInput();
         void renderLoop();
 
-        // Shader For rendering output.
+        // Shader For rendering output frame.
         GLuint shaderID = 0;
     };
 }

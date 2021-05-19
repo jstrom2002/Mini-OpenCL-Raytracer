@@ -7,13 +7,13 @@
 typedef struct
 {
     float3 pos[2];
-} Bounds3;
+} CLBounds3;
 #endif
 
-typedef struct Material
+typedef struct CLMaterial
 {
 #ifdef __cplusplus
-    Material() : diffuse(float3(0.2)), specular(float3(1)), roughness(9999),ior(0) {}
+    CLMaterial() : diffuse(float3(0.2)), specular(float3(1)), roughness(9999),ior(0) {}
 #endif
     // Basic material properties.
     float3 diffuse;
@@ -23,13 +23,13 @@ typedef struct Material
     float roughness;
     float ior;
     int padding;
-} Material;
+} CLMaterial;
 
-typedef struct Vertex
+typedef struct CLVertex
 {
 #ifdef __cplusplus
-    Vertex() {}
-    Vertex(const float3& position, const float2& texcoord, const float3& normal)
+    CLVertex() {}
+    CLVertex(const float3& position, const float2& texcoord, const float3& normal)
         : position(position), uv(texcoord.x, texcoord.y, 0),
         normal(normal)
     {}
@@ -39,12 +39,12 @@ typedef struct Vertex
     float3 normal;
     float3 tangent_s;
     float3 tangent_t;
-} Vertex;
+} CLVertex;
 
-typedef struct Triangle
+typedef struct CLTriangle
 {
 #ifdef __cplusplus
-    Triangle(Vertex v1, Vertex v2, Vertex v3, unsigned int mtlIndex)
+    CLTriangle(CLVertex v1, CLVertex v2, CLVertex v3, unsigned int mtlIndex)
         : v1(v1), v2(v2), v3(v3), mtlIndex(mtlIndex)
     {}
 
@@ -63,38 +63,26 @@ typedef struct Triangle
         }
     }
 
-    Bounds3 GetBounds() const
+    CLBounds3 GetBounds() const
     {
-        return Union(Bounds3(v1.position, v2.position), v3.position);
+        return Union(CLBounds3(v1.position, v2.position), v3.position);
     }
 #endif
-    Vertex v1, v2, v3;
+    CLVertex v1, v2, v3;
     unsigned int mtlIndex;
     unsigned int padding[3];
-} Triangle;
+} CLTriangle;
 
-typedef struct Light
+typedef struct CLLinearBVHNode
 {
 #ifdef __cplusplus
-    Light() {}
-#endif 
-    float3 position;
-    float3 direction;
-    int type;
-    float intensity;
-    float attenuation;
-}Light;
-
-typedef struct LinearBVHNode
-{
-#ifdef __cplusplus
-    LinearBVHNode() {}
+    CLLinearBVHNode() {}
 #endif    
     // NOTE: ensure that this struct is 48 byte total size.
-    Bounds3 bounds;
+    CLBounds3 bounds;
     unsigned int offset; // primitives (leaf) or second child (interior) offset
     unsigned short nPrimitives;  // 0 -> interior node
     unsigned char axis;          // interior node: xyz
     unsigned char pad[9];        
 
-} LinearBVHNode;
+} CLLinearBVHNode;

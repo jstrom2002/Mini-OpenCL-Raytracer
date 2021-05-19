@@ -4,19 +4,19 @@
 
 namespace Glaze3D
 {
-    BVHBuildNode* BVHScene::RecursiveBuild(
-        std::vector<BVHPrimitiveInfo>& primitiveInfo,
+    CLBVHBuildNode* CLBVHScene::RecursiveBuild(
+        std::vector<CLBVHPrimitiveInfo>& primitiveInfo,
         unsigned int start,
         unsigned int end, unsigned int* totalNodes,
-        std::vector<Triangle>& orderedTriangles)
+        std::vector<CLTriangle>& orderedTriangles)
     {
         assert(start <= end);
 
-        BVHBuildNode* node = new BVHBuildNode;
+        CLBVHBuildNode* node = new CLBVHBuildNode;
         (*totalNodes)++;
 
         // Compute bounds of all primitives in BVH node
-        Bounds3 bounds;
+        CLBounds3 bounds;
         for (unsigned int i = start; i < end; ++i)
         {
             bounds = Union(bounds, primitiveInfo[i].bounds);
@@ -38,7 +38,7 @@ namespace Glaze3D
         else
         {
             // Compute bound of primitive centroids, choose split dimension
-            Bounds3 centroidBounds;
+            CLBounds3 centroidBounds;
             for (unsigned int i = start; i < end; ++i)
             {
                 centroidBounds = Union(centroidBounds, primitiveInfo[i].centroid);
@@ -66,7 +66,7 @@ namespace Glaze3D
                     // Partition primitives into equally-sized subsets
                     mid = (start + end) / 2;
                     std::nth_element(&primitiveInfo[start], &primitiveInfo[mid], &primitiveInfo[end - 1] + 1,
-                        [dim](const BVHPrimitiveInfo& a, const BVHPrimitiveInfo& b)
+                        [dim](const CLBVHPrimitiveInfo& a, const CLBVHPrimitiveInfo& b)
                         {
                             return a.centroid[dim] < b.centroid[dim];
                         });
@@ -75,7 +75,7 @@ namespace Glaze3D
                 {
                     // Partition primitives using approximate SAH
                     const unsigned int nBuckets = 12;
-                    BucketInfo buckets[nBuckets];
+                    CLBucketInfo buckets[nBuckets];
 
                     // Initialize _BucketInfo_ for SAH partition buckets
                     for (unsigned int i = start; i < end; ++i)
@@ -91,7 +91,7 @@ namespace Glaze3D
                     float cost[nBuckets - 1];
                     for (unsigned int i = 0; i < nBuckets - 1; ++i)
                     {
-                        Bounds3 b0, b1;
+                        CLBounds3 b0, b1;
                         int count0 = 0, count1 = 0;
                         for (unsigned int j = 0; j <= i; ++j)
                         {
@@ -122,8 +122,8 @@ namespace Glaze3D
                     float leafCost = float(nPrimitives);
                     if (nPrimitives > m_MaxPrimitivesInNode || minCost < leafCost)
                     {
-                        BVHPrimitiveInfo* pmid = std::partition(&primitiveInfo[start], &primitiveInfo[end - 1] + 1,
-                            [=](const BVHPrimitiveInfo& pi)
+                        CLBVHPrimitiveInfo* pmid = std::partition(&primitiveInfo[start], &primitiveInfo[end - 1] + 1,
+                            [=](const CLBVHPrimitiveInfo& pi)
                             {
                                 int b = nBuckets * centroidBounds.Offset(pi.centroid)[dim];
                                 if (b == nBuckets) b = nBuckets - 1;
@@ -158,9 +158,9 @@ namespace Glaze3D
         return node;
     }
 
-    unsigned int BVHScene::FlattenBVHTree(BVHBuildNode* node, unsigned int* offset)
+    unsigned int CLBVHScene::FlattenBVHTree(CLBVHBuildNode* node, unsigned int* offset)
     {
-        LinearBVHNode* linearNode = &m_Nodes[*offset];
+        CLLinearBVHNode* linearNode = &m_Nodes[*offset];
         linearNode->bounds = node->bounds;
         unsigned int myOffset = (*offset)++;
         if (node->nPrimitives > 0)
@@ -182,19 +182,17 @@ namespace Glaze3D
         return myOffset;
     }
 
-    void BVHScene::Load(const char* filename, unsigned int maxPrimitivesInNode)
+    void CLBVHScene::CreateBVHTrees(unsigned int maxPrimitivesInNode)
     {
         m_MaxPrimitivesInNode = maxPrimitivesInNode;
 
-        LoadTriangles(filename);
-
         // Build BVH for scene.
-        std::vector<BVHPrimitiveInfo> primitiveInfo(m_Triangles.size());
+        std::vector<CLBVHPrimitiveInfo> primitiveInfo(m_Triangles.size());
         for (unsigned int i = 0; i < m_Triangles.size(); ++i)
             primitiveInfo[i] = { i, m_Triangles[i].GetBounds() };
 
         unsigned int totalNodes = 0;
-        std::vector<Triangle> orderedTriangles;
+        std::vector<CLTriangle> orderedTriangles;
         m_Root = RecursiveBuild(primitiveInfo, 0, m_Triangles.size(), &totalNodes, orderedTriangles);
         m_Triangles.swap(orderedTriangles);
 
@@ -208,21 +206,21 @@ namespace Glaze3D
         SetupBuffers();
     }
 
-    void BVHScene::SetupBuffers()
+    void CLBVHScene::SetupBuffers()
     {
         cl_int errCode;
 
         // Set GPU-side triangle array.
         m_TriangleBuffer = cl::Buffer(eng->render->m_CLContext->GetContext(),
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, m_Triangles.size() *
-            sizeof(Triangle), m_Triangles.data(), &errCode);
+            sizeof(CLTriangle), m_Triangles.data(), &errCode);
         if (errCode)
             throw CLException("Failed to create scene buffer", errCode);
         eng->render->SetUniform<cl::Buffer>((int)RenderKernelArgument_t::BUFFER_SCENE, m_TriangleBuffer);
 
         // Set GPU-side BVH node array.
         m_NodeBuffer = cl::Buffer(eng->render->m_CLContext->GetContext(),
-            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, m_Nodes.size() * sizeof(LinearBVHNode),
+            CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, m_Nodes.size() * sizeof(CLLinearBVHNode),
             m_Nodes.data(), &errCode);
         if (errCode)
             throw CLException("Failed to create BVH node buffer", errCode);
@@ -231,13 +229,13 @@ namespace Glaze3D
         // Set GPU-side material array.
         m_MaterialBuffer = cl::Buffer(eng->render->m_CLContext->GetContext(),
             CL_MEM_READ_ONLY | CL_MEM_COPY_HOST_PTR, m_Materials.size() *
-            sizeof(Material), m_Materials.data(), &errCode);
+            sizeof(CLMaterial), m_Materials.data(), &errCode);
         if (errCode)
             throw CLException("Failed to create material buffer", errCode);
         eng->render->SetUniform<cl::Buffer>((int)RenderKernelArgument_t::BUFFER_MATERIAL, m_MaterialBuffer);
     }
 
-    void ComputeTangentSpace(Vertex& v1, Vertex& v2, Vertex& v3)
+    void ComputeTangentSpace(CLVertex& v1, CLVertex& v2, CLVertex& v3)
     {
         const float3& v1p = v1.position;
         const float3& v2p = v2.position;
@@ -271,165 +269,5 @@ namespace Glaze3D
         v2.tangent_t += tdir;
         v3.tangent_t += tdir;
 
-    }
-
-    void BVHScene::LoadTriangles(const char* filename)
-    {
-        char mtlname[80];
-        memset(mtlname, 0, 80);
-        strncpy(mtlname, filename, strlen(filename) - 4);
-        strcat(mtlname, ".mtl");
-
-        LoadMaterials(mtlname);
-
-        std::vector<float3> positions;
-        std::vector<float3> normals;
-        std::vector<float2> texcoords;
-
-        Material currentMaterial;
-        FILE* file = fopen(filename, "r");
-        if (!file)
-        {
-            throw std::exception("Failed to open scene file!");
-        }
-
-        unsigned int materialIndex = -1;
-
-        while (true)
-        {
-            char lineHeader[128];
-            int res = fscanf(file, "%s", lineHeader);
-            if (res == EOF)
-            {
-                break;
-            }
-            if (strcmp(lineHeader, "v") == 0)
-            {
-                float3 vertex;
-                fscanf(file, "%f %f %f\n", &vertex.x, &vertex.y, &vertex.z);
-                positions.push_back(vertex);
-            }
-            else if (strcmp(lineHeader, "vt") == 0)
-            {
-                float2 uv;
-                fscanf(file, "%f %f\n", &uv.x, &uv.y);
-                texcoords.push_back(uv);
-            }
-            else if (strcmp(lineHeader, "vn") == 0)
-            {
-                float3 normal;
-                fscanf(file, "%f %f %f\n", &normal.x, &normal.y, &normal.z);
-                normals.push_back(normal);
-            }
-            else if (strcmp(lineHeader, "usemtl") == 0)
-            {
-                char str[80];
-                fscanf(file, "%s\n", str);
-                for (unsigned int i = 0; i < m_MaterialNames.size(); ++i)
-                {
-                    if (strcmp(str, m_MaterialNames[i].c_str()) == 0)
-                    {
-                        materialIndex = i;
-                        break;
-                    }
-                }
-
-            }
-            else if (strcmp(lineHeader, "f") == 0)
-            {
-                // Count spaces in line, which delimit values.
-                int numberOfEntries = 0;//assume at least one value in line.
-                char linestr[128];
-                fgets(linestr, sizeof(linestr), file);
-
-                // tokenize and handle values
-                char* tokens = strtok(linestr, " ");
-                std::vector<unsigned int> iv, it, in;
-                while (tokens != NULL)
-                {
-                    if (strlen(tokens) > 1)
-                    {
-                        iv.push_back(0);
-                        it.push_back(0);
-                        in.push_back(0);
-                        sscanf(tokens, "%d/%d/%d", &iv[iv.size() - 1], &it[it.size() - 1], &in[in.size() - 1]);
-                    }
-                    tokens = strtok(NULL, " ");
-                }
-
-                // Add all triangles to the array.
-                for (int i = 0; i < iv.size() - 2; ++i)
-                {
-                    int idx1 = i + 0;
-                    int idx2 = i + 1;
-                    int idx3 = i + 2;
-                    m_Triangles.push_back(Triangle(
-                        Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
-                        Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
-                        Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
-                        materialIndex
-                    ));
-                }
-                // Add final triangle, connecting face back to the first vertex.
-                if (iv.size() > 1)
-                {
-                    int idx1 = iv.size() - 2;
-                    int idx2 = iv.size() - 1;
-                    int idx3 = 0;
-                    m_Triangles.push_back(Triangle(
-                        Vertex(positions[iv[idx1] - 1], texcoords[it[idx1] - 1], normals[in[idx1] - 1]),
-                        Vertex(positions[iv[idx2] - 1], texcoords[it[idx2] - 1], normals[in[idx2] - 1]),
-                        Vertex(positions[iv[idx3] - 1], texcoords[it[idx3] - 1], normals[in[idx3] - 1]),
-                        materialIndex
-                    ));
-                }
-            }
-        }
-    }
-
-    void BVHScene::LoadMaterials(const char* filename)
-    {
-        FILE* file = fopen(filename, "r");
-        if (!file)
-        {
-            throw std::exception("Failed to open material file!");
-        }
-
-        while (true)
-        {
-            char buf[128];
-            int res = fscanf(file, "%s", buf);
-            if (res == EOF)
-            {
-                break;
-            }
-            if (strcmp(buf, "newmtl") == 0)
-            {
-                char str[80];
-                fscanf(file, "%s\n", str);
-                m_MaterialNames.push_back(str);
-                m_Materials.push_back(Material());
-            }
-            else if (strcmp(buf, "Kd") == 0)
-            {
-                fscanf(file, "%f %f %f\n", &m_Materials.back().diffuse.x, &m_Materials.back().diffuse.y, &m_Materials.back().diffuse.z);
-            }
-            else if (strcmp(buf, "Ks") == 0)
-            {
-                fscanf(file, "%f %f %f\n", &m_Materials.back().specular.x, &m_Materials.back().specular.y, &m_Materials.back().specular.z);
-            }
-            else if (strcmp(buf, "Ke") == 0)
-            {
-                fscanf(file, "%f %f %f\n", &m_Materials.back().emission.x, &m_Materials.back().emission.y, &m_Materials.back().emission.z);
-            }
-            else if (strcmp(buf, "Ns") == 0)
-            {
-                fscanf(file, "%f\n", &m_Materials.back().roughness);
-            }
-            else if (strcmp(buf, "Ni") == 0)
-            {
-                fscanf(file, "%f\n", &m_Materials.back().ior);
-            }
-        }
     }
 }

@@ -4,12 +4,16 @@
 #include <glm/gtc/type_ptr.hpp>
 #include "CLBVHnode.h"
 #include "CLutils.h"
+#include "CLui.h"
 #include "CLmathlib.hpp"
 
 namespace Glaze3D
 {
     void CLRaytracer::RenderFrame()
     {
+        if (eng->ui->windowClose)
+            return;
+
         if (outputTexture == 0) {
             glGenTextures(1, &outputTexture);
             glBindTexture(GL_TEXTURE_2D, outputTexture);
@@ -18,49 +22,50 @@ namespace Glaze3D
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
             glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, eng->window_width,
-                eng->window_height, 0, GL_RGBA, GL_FLOAT, 0);
+            glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, eng->ui->window_width,
+                eng->ui->window_height, 0, GL_RGBA, GL_FLOAT, 0);
             glBindTexture(GL_TEXTURE_2D, 0);
         }
+
+        ImGui::NewFrame();
+        ImGui_ImplGlfw_NewFrame();
 
         // Update uniforms.
         unsigned int seed = rand();
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_COUNT, m_FrameCount);
         eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::FRAME_SEED, seed);
+        eng->render->SetUniform<int>((int)RenderKernelArgument_t::LIGHT_BOUNCES, lightBounces);
+        eng->render->SetUniform<float>((int)RenderKernelArgument_t::SKYBOX_INTENSITY, skyboxIntensity);
 
-        //float3 val = float3(eng->camera.position);
-        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_POS, val);
-        //val = float3(eng->camera.front);
-        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_FRONT, val);
-        //val = float3(eng->camera.up);
-        //eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_UP, val);
-
-        float3 val = float3(0.0f, -25.0f, 8.5f);
+        float3 val = float3(eng->m_Camera.position);
         eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_POS, val);
-        val = float3(0.0f, 1.0f, 0.0f);
+        val = float3(eng->m_Camera.front);
         eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_FRONT, val);
-        val = float3(0.0f, 0.0f, 1.0f);
+        val = float3(eng->m_Camera.up);
         eng->render->SetUniform<float3>((int)RenderKernelArgument_t::CAMERA_UP, val);
 
 
-        // Execute kernel code, copy output to viewport pixels.
-        unsigned int globalWorksize = eng->window_width * eng->window_height;
-        if (pixels.size() != globalWorksize)
-            pixels.resize(globalWorksize);
-        eng->render->m_CLContext->ExecuteKernel(eng->render->m_RenderKernel, globalWorksize);
-        eng->render->m_CLContext->ReadBuffer(m_OutputBuffer, pixels.data(), sizeof(float3) * globalWorksize);
-        eng->render->m_CLContext->Finish();
+        // Execute kernel code, copy output to viewport pixels.        
+        if (!eng->ui->isPaused && !eng->ui->framestepOn)
+        {
+            unsigned int globalWorksize = eng->ui->window_width * eng->ui->window_height;
+            eng->render->m_CLContext->ExecuteKernel(eng->render->m_RenderKernel, globalWorksize);
+            eng->render->m_CLContext->ReadBuffer(m_OutputBuffer, pixels.data(), sizeof(float3) * globalWorksize);
+            eng->render->m_CLContext->Finish();
+
+            eng->ui->framestepOn = false;
+        }
 
         // Update output texture.
         glBindTexture(GL_TEXTURE_2D, outputTexture);
-        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, eng->window_width,
-            eng->window_height, GL_RGBA, GL_FLOAT, pixels.data());
+        glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, eng->ui->window_width,
+            eng->ui->window_height, GL_RGBA, GL_FLOAT, pixels.data());
         glBindTexture(GL_TEXTURE_2D, 0);
 
         // Draw framebuffer to default frame.
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         glDisable(GL_DEPTH_TEST);
-        glViewport(0, 0, eng->window_width, eng->window_height);
+        glViewport(0, 0, eng->ui->window_width, eng->ui->window_height);
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClearDepth(1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -71,8 +76,15 @@ namespace Glaze3D
         eng->basicShapes.drawQuad();
         glBindTexture(GL_TEXTURE_2D, 0);
 
+
+        // Render the UI.
+        eng->ui->renderUI();
+        ImGui::Render();
+
+
         // Swap buffers, end render.
         glfwSwapBuffers(eng->window);
+        eng->ui->firstRun = false;
         ++m_FrameCount;
     }
 
@@ -99,19 +111,16 @@ namespace Glaze3D
         cl_int errCode;
 
         // Set output frame dimensions.
-        eng->render->SetUniform<int>((int)RenderKernelArgument_t::WIDTH,eng->window_width);
-        eng->render->SetUniform<int>((int)RenderKernelArgument_t::HEIGHT,eng->window_height);
-        pixels.resize(eng->window_width * eng->window_height);
+        eng->render->SetUniform<int>((int)RenderKernelArgument_t::WIDTH,eng->ui->window_width);
+        eng->render->SetUniform<int>((int)RenderKernelArgument_t::HEIGHT,eng->ui->window_height);
+        pixels.resize(eng->ui->window_width * eng->ui->window_height);
 
         // Set output buffer for frame image -- should use 'img' image for output data.
         m_OutputBuffer = cl::Buffer(eng->render->m_CLContext->GetContext(),
-            CL_MEM_WRITE_ONLY, eng->window_width * eng->window_height * sizeof(float3), 0, &errCode);
+            CL_MEM_WRITE_ONLY, eng->ui->window_width * eng->ui->window_height * sizeof(float3), 0, &errCode);
         if (errCode)
             throw CLException("Failed to create output buffer", errCode);
         eng->render->SetUniform<cl::Buffer>((int)RenderKernelArgument_t::BUFFER_OUT, m_OutputBuffer);
-
-        // Set max light bounces.
-        eng->render->SetUniform<unsigned int>((int)RenderKernelArgument_t::LIGHT_BOUNCES, lightBounces);
     }
 
     template <class T>

@@ -21,7 +21,7 @@ public:
     float3(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
     float3(float val) : x(val), y(val), z(val) {}
     float3() : x(0), y(0), z(0) {}
-    //float3(glm::vec3 v) : x(v.x), y(v.y), z(v.z){}
+    float3(glm::vec3 v) : x(v.x), y(v.y), z(v.z){}
     //float3(glm::vec4 v) : x(v.x), y(v.y), z(v.z){}
 
     glm::vec3 toGLM() { return glm::vec3(x, y, z); }
