@@ -8,4 +8,5 @@ Small scale lib for raytracing in OpenCL
 OpenCL 2  
 OpenGL 4  
 GLFW 3  
-ImGui v 1.86  
+ImGui v1.86  
+OpenCV 4  
