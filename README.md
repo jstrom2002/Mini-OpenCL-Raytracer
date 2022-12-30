@@ -2,7 +2,7 @@
 
 Small scale lib for raytracing in OpenCL  
 
-(ocl.png)[]
+![](ocl.png)
 
 ### Dependencies  
 OpenCL 2  
