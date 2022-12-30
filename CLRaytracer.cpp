@@ -90,10 +90,13 @@ namespace Glaze3D
             ImDrawData* imdata = ImGui::GetDrawData();
             ImGui_ImplOpenGL3_RenderDrawData(imdata);
         }
-
+    
+        if (!glfwWindowShouldClose(eng->window))
+        {
+            glfwSwapBuffers(eng->window);
+        }
 
         // Swap buffers, end render.
-        glfwSwapBuffers(eng->window);
         eng->ui->firstRun = false;
         ++m_FrameCount;
     }
