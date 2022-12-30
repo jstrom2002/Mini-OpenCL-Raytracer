@@ -1,6 +1,6 @@
 # Mini-OpenCL-Raytracer  
 
-Small scale lib for raytracing in OpenCL  
+Small scale app for raytracing in OpenCL  
 
 ![](ocl.png)
 
