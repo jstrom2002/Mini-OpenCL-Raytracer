@@ -27,8 +27,9 @@ namespace Glaze3D
             glBindTexture(GL_TEXTURE_2D, 0);
         }
 
-        ImGui::NewFrame();
+        ImGui_ImplOpenGL3_NewFrame();
         ImGui_ImplGlfw_NewFrame();
+        ImGui::NewFrame();
 
         // Update uniforms.
         unsigned int seed = rand();
@@ -82,7 +83,13 @@ namespace Glaze3D
 
         // Render the UI.
         eng->ui->renderUI();
-        ImGui::Render();
+        ImGui::EndFrame();
+
+        if (eng && eng->window && !eng->windowClose) {
+            ImGui::Render();
+            ImDrawData* imdata = ImGui::GetDrawData();
+            ImGui_ImplOpenGL3_RenderDrawData(imdata);
+        }
 
 
         // Swap buffers, end render.

@@ -7,25 +7,10 @@
 
 namespace Glaze3D
 {
-    std::unique_ptr<CLui::RendererData> CLui::renderer = nullptr;
-
-    void CLui::terminate()
-    {
-        if (fontTexture)
-        {
-            glDeleteTextures(1, &fontTexture);
-            ImGui::GetIO().Fonts->TexID = 0;
-            fontTexture = 0;
-        }
-        delete renderer.release();
-    }
-
 	void CLui::init()
 	{
         if (isInitialized)
             return;
-
-        if (!renderer) { renderer = std::make_unique<RendererData>(); }
 
         // Setup imgui window.    
         IMGUI_CHECKVERSION();
@@ -34,7 +19,10 @@ namespace Glaze3D
         // Initialize ImGui context and set values.
         ImGui_ImplGlfw_InitForOpenGL(eng->window, true);
         ImGui_ImplOpenGL3_Init();
-        ImGuiIO& io = ImGui::GetIO(); (void)io;
+        ImGuiIO& io = ImGui::GetIO(); 
+        (void)io;
+        io.Fonts->AddFontDefault();
+        io.Fonts->Build();
         io.IniFilename = NULL;								   // Disable loading from .ini file.
         io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
         //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
@@ -48,27 +36,11 @@ namespace Glaze3D
         // Set ImGui's cursor settings -- ImGui's software cursor is very slow and eats up roughly 3 frames per second.
         io.MouseDrawCursor = true;
 
-        // Setup fonts and build texture atlas.
-        unsigned char* pixels;
-        int width, height;
-        // Load as RGBA 32-bits for OpenGL3 demo because it is more
-        // likely to be compatible with user's existing shader.
-        io.Fonts->AddFontFromFileTTF("Roboto-Medium.ttf", 14.0f);
-        //Glaze3D::CustomFileDialog::Instance()->runAfterLoadingAFont();
-        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-
-        // Create OpenGL texture
-        glGenTextures(1, &fontTexture);
-        glBindTexture(GL_TEXTURE_2D, fontTexture);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-        glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, width, height, 0, GL_RGBA,
-            GL_UNSIGNED_BYTE, pixels);
         // Store our identifier
-        io.Fonts->TexID = (void*)(intptr_t)fontTexture;
+        io.FontDefault = 0;
 
         // Keyboard mapping. ImGui will use those indices to peek
-    // into the io.KeyDown[] array.
+        // into the io.KeyDown[] array.
         io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
         io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
         io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
@@ -88,7 +60,7 @@ namespace Glaze3D
         io.KeyMap[ImGuiKey_X] = GLFW_KEY_X;
         io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
         io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
-        io.RenderDrawListsFn = RenderDrawList;
+        //io.RenderDrawListsFn = RenderDrawList;
         //io.SetClipboardTextFn = SetClipboardText;
         //io.GetClipboardTextFn = GetClipboardText;
 #ifdef _WIN32
@@ -111,80 +83,6 @@ namespace Glaze3D
         io.DisplaySize.y = static_cast<float>(h);
         io.DisplayFramebufferScale.x = static_cast<float>(display_w) / w;
         io.DisplayFramebufferScale.y = static_cast<float>(display_h) / h;
-
-        // Backup GL state
-        GLint last_texture, last_array_buffer, last_vertex_array;
-        glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-        auto vertex_shader =
-            "#version 330\n"
-            "uniform mat4 ProjMtx;\n"
-            "in vec2 Position;\n"
-            "in vec2 UV;\n"
-            "in vec4 Color;\n"
-            "out vec2 Frag_UV;\n"
-            "out vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "	Frag_UV = UV;\n"
-            "	Frag_Color = Color;\n"
-            "	gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-            "}\n";
-        auto fragment_shader =
-            "#version 330\n"
-            "uniform sampler2D Texture;\n"
-            "in vec2 Frag_UV;\n"
-            "in vec4 Frag_Color;\n"
-            "out vec4 Out_Color;\n"
-            "void main()\n"
-            "{\n"
-            "	Out_Color = Frag_Color * texture( Texture, Frag_UV.st);\n"
-            "}\n";
-        renderer->shaderHandle = glCreateProgram();
-        renderer->vertHandle = glCreateShader(GL_VERTEX_SHADER);
-        renderer->fragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-        glShaderSource(renderer->vertHandle, 1, &vertex_shader, 0);
-        glShaderSource(renderer->fragHandle, 1, &fragment_shader, 0);
-        glCompileShader(renderer->vertHandle);
-        glCompileShader(renderer->fragHandle);
-        glAttachShader(renderer->shaderHandle, renderer->vertHandle);
-        glAttachShader(renderer->shaderHandle, renderer->fragHandle);
-        glLinkProgram(renderer->shaderHandle);
-        renderer->attribLocationTex = glGetUniformLocation
-        (renderer->shaderHandle, "Texture");
-        renderer->attribLocationProjMtx = glGetUniformLocation
-        (renderer->shaderHandle, "ProjMtx");
-        renderer->attribLocationPosition = glGetAttribLocation
-        (renderer->shaderHandle, "Position");
-        renderer->attribLocationUV = glGetAttribLocation
-        (renderer->shaderHandle, "UV");
-        renderer->attribLocationColor = glGetAttribLocation
-        (renderer->shaderHandle, "Color");
-        glGenBuffers(1, &renderer->vboHandle);
-        glGenBuffers(1, &renderer->elementsHandle);
-        glGenVertexArrays(1, &renderer->vaoHandle);
-        glBindVertexArray(renderer->vaoHandle);
-        glBindBuffer(GL_ARRAY_BUFFER, renderer->vboHandle);
-        glEnableVertexAttribArray(renderer->attribLocationPosition);
-        glEnableVertexAttribArray(renderer->attribLocationUV);
-        glEnableVertexAttribArray(renderer->attribLocationColor);
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-        glVertexAttribPointer(renderer->attribLocationPosition, 2, GL_FLOAT,
-            GL_FALSE, sizeof(ImDrawVert), (GLvoid*)
-            OFFSETOF(ImDrawVert, pos));
-        glVertexAttribPointer(renderer->attribLocationUV, 2, GL_FLOAT,
-            GL_FALSE, sizeof(ImDrawVert), (GLvoid*)
-            OFFSETOF(ImDrawVert, uv));
-        glVertexAttribPointer(renderer->attribLocationColor, 4, GL_UNSIGNED_BYTE,
-            GL_TRUE, sizeof(ImDrawVert), (GLvoid*)
-            OFFSETOF(ImDrawVert, col));
-#undef OFFSETOF
-
-        // Restore modified GL state
-        glBindTexture(GL_TEXTURE_2D, last_texture);
-        glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-        glBindVertexArray(last_vertex_array);
 
         SetDefaultStyle();
 
@@ -210,10 +108,6 @@ namespace Glaze3D
 
         // setup time step
         auto current_time = glfwGetTime();
-        io.DeltaTime = renderer->time > 0.0
-            ? static_cast<float>(current_time - renderer->time)
-            : static_cast<float>(1.0f / 60.0f);
-        renderer->time = current_time;
 
         // Get mouse position in screen coordinates
         glfwGetCursorPos(eng->window, &mousePixels_x, &mousePixels_y);
@@ -372,118 +266,6 @@ namespace Glaze3D
         }
     }
 
-    void CLui::RenderDrawList(ImDrawData* drawData)
-    {
-        // Backup GL state
-        GLint last_program;
-        glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
-        GLint last_texture;
-        glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
-        GLint last_array_buffer;
-        glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
-        GLint last_element_array_buffer;
-        glGetIntegerv(GL_ELEMENT_ARRAY_BUFFER_BINDING, &last_element_array_buffer);
-        GLint last_vertex_array;
-        glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
-        GLint last_blend_src;
-        glGetIntegerv(GL_BLEND_SRC, &last_blend_src);
-        GLint last_blend_dst;
-        glGetIntegerv(GL_BLEND_DST, &last_blend_dst);
-        GLint last_blend_equation_rgb;
-        glGetIntegerv(GL_BLEND_EQUATION_RGB, &last_blend_equation_rgb);
-        GLint last_blend_equation_alpha;
-        glGetIntegerv(GL_BLEND_EQUATION_ALPHA, &last_blend_equation_alpha);
-        GLboolean last_enable_blend = glIsEnabled(GL_BLEND);
-        GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
-        GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
-        GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
-        // Setup render state: alpha-blending enabled,
-        // no face culling, no depth testing, scissor enabled
-        glEnable(GL_BLEND);
-        glBlendEquation(GL_FUNC_ADD);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-        glDisable(GL_CULL_FACE);
-        glDisable(GL_DEPTH_TEST);
-        glEnable(GL_SCISSOR_TEST);
-        glActiveTexture(GL_TEXTURE0);
-        // Handle cases of screen coordinates != from
-        // framebuffer coordinates (e.g. retina displays)
-        ImGuiIO& io = ImGui::GetIO();
-        float fb_height = io.DisplaySize.y * io.DisplayFramebufferScale.y;
-        drawData->ScaleClipRects(io.DisplayFramebufferScale);
-        // Setup orthographic projection matrix
-        static glm::mat4x4 ortho_projection =
-        {
-            { 7.7f, 0.0f, 0.0f, 0.0f },
-            { 0.0f, 7.7f, 0.0f, 0.0f },
-            { 0.0f, 0.0f, -1.0f, 0.0f },
-            { -1.0f, 1.0f, 0.0f, 1.0f },
-        };
-        ortho_projection[0][0] = 2.0f / io.DisplaySize.x;
-        ortho_projection[1][1] = 2.0f / -io.DisplaySize.y;
-        glUseProgram(renderer->shaderHandle);
-        glUniform1i(renderer->attribLocationTex, 0);
-        glUniformMatrix4fv(renderer->attribLocationProjMtx, 1, GL_FALSE,
-            glm::value_ptr(ortho_projection));
-        glBindVertexArray(renderer->vaoHandle);
-
-        for (int index = 0; index < drawData->CmdListsCount; index++)
-        {
-            const ImDrawList* cmd_list = drawData->CmdLists[index];
-            const ImDrawIdx* idx_buffer_offset = 0;
-            glBindBuffer(GL_ARRAY_BUFFER, renderer->vboHandle);
-            glBufferData(GL_ARRAY_BUFFER,
-                (GLsizeiptr)cmd_list->VtxBuffer.size() * sizeof(ImDrawVert),
-                (GLvoid*)&cmd_list->VtxBuffer.front(), GL_STREAM_DRAW);
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, renderer->elementsHandle);
-            glBufferData(GL_ELEMENT_ARRAY_BUFFER,
-                (GLsizeiptr)cmd_list->IdxBuffer.size() * sizeof(ImDrawIdx),
-                (GLvoid*)&cmd_list->IdxBuffer.front(), GL_STREAM_DRAW);
-
-            for (const ImDrawCmd* pcmd = cmd_list->CmdBuffer.begin();
-                pcmd != cmd_list->CmdBuffer.end(); pcmd++)
-            {
-                if (pcmd->UserCallback)
-                {
-                    pcmd->UserCallback(cmd_list, pcmd);
-                }
-                else
-                {
-                    glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-                    glScissor((int)pcmd->ClipRect.x,
-                        (int)(fb_height - pcmd->ClipRect.w),
-                        (int)(pcmd->ClipRect.z - pcmd->ClipRect.x),
-                        (int)(pcmd->ClipRect.w - pcmd->ClipRect.y));
-                    glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount,
-                        GL_UNSIGNED_SHORT, idx_buffer_offset);
-                }
-
-                idx_buffer_offset += pcmd->ElemCount;
-            }
-        }
-
-        // Restore modified GL state
-        glUseProgram(last_program);
-        glBindTexture(GL_TEXTURE_2D, last_texture);
-        glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, last_element_array_buffer);
-        glBindVertexArray(last_vertex_array);
-        glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
-        glBlendFunc(last_blend_src, last_blend_dst);
-
-        if (last_enable_blend) { glEnable(GL_BLEND); }
-        else { glDisable(GL_BLEND); }
-
-        if (last_enable_cull_face) { glEnable(GL_CULL_FACE); }
-        else { glDisable(GL_CULL_FACE); }
-
-        if (last_enable_depth_test) { glEnable(GL_DEPTH_TEST); }
-        else { glDisable(GL_DEPTH_TEST); }
-
-        if (last_enable_scissor_test) { glEnable(GL_SCISSOR_TEST); }
-        else { glDisable(GL_SCISSOR_TEST); }
-    }
-
     void CLui::SetDefaultStyle() 
     {
         ImGuiStyle* style = &ImGui::GetStyle();
@@ -508,7 +290,7 @@ namespace Glaze3D
         style->GrabRounding = 2.000000;
         style->TabRounding = 5.000000;
         style->TabBorderSize = 1.000000;
-        style->TabMinWidthForUnselectedCloseButton = 0.000000;
+        //style->TabMinWidthForUnselectedCloseButton = 0.000000;
         style->ColorButtonPosition = 1;
         style->ButtonTextAlign = ImVec2(0.5, 0.5);
         style->SelectableTextAlign = ImVec2(0, 0);
@@ -518,7 +300,7 @@ namespace Glaze3D
         style->AntiAliasedLines = 1;
         style->AntiAliasedFill = 1;
         style->CurveTessellationTol = 1.250000;
-        style->CircleSegmentMaxError = 1.600000;
+        //style->CircleSegmentMaxError = 1.600000;
         style->WindowPadding = ImVec2(5, 15);
         style->WindowRounding = 5.000000;
         style->WindowBorderSize = 2.000000;

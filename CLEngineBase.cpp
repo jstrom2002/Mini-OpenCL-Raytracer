@@ -174,10 +174,7 @@ namespace Glaze3D
             CLOBJloader obj;
             int maxPrimitives = 4;
             obj.Load(
-                //"cornell.obj"
-                //"C:\\assets\\obj\\sibenik\\sibenik.obj"
-                //"C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\city.obj"
-                "C:\\Users\\--\\source\\repos\\OpenCL-Raytracer2\\OpenCL-Raytracer2\\meshes\\dragon.obj"
+                "cornell.obj"
                 , maxPrimitives);
             eng->render->m_Scene->CreateBVHTrees(maxPrimitives);
         }
@@ -214,7 +211,7 @@ namespace Glaze3D
 
 
         // Shutdown ImGui.
-        eng->ui->terminate();
+        eng->ui.reset();
         ImGui_ImplGlfw_Shutdown();
         ImGuiContext* g = ImGui::GetCurrentContext();
         if (g)

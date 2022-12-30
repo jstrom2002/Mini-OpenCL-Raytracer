@@ -58,6 +58,7 @@
 #pragma comment(lib, "lzma.lib")
 #pragma comment(lib, "pugixml.lib")
 #pragma comment(lib, "OpenCL.lib")
+#pragma comment(lib, "Cfgmgr32.lib")
 
 
 #ifdef _DEBUG

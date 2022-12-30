@@ -9,7 +9,6 @@ namespace Glaze3D
 
     struct CLui
     {
-        GLuint fontTexture = 0;
         double mousePixels_x = 0;
         double mousePixels_y = 0;
         double mouseDeltaX = 0;
@@ -36,55 +35,8 @@ namespace Glaze3D
         const ImVec4 Glaze3DDarkTealColor = ImVec4(0.0, 0.45, 0.45, 1);		// Darker green accent color.
         const ImVec4 Glaze3DWhiteColor = ImVec4(1, 1, 1, 1);				// Solid white for some text, outlines.
 
-        struct RendererData
-        {
-            double time = 0;
-            int shaderHandle = 0;
-            int vertHandle = 0;
-            int fragHandle = 0;
-            int attribLocationTex = 0;
-            int attribLocationProjMtx = 0;
-            int attribLocationPosition = 0;
-            int attribLocationUV = 0;
-            int attribLocationColor = 0;
-            unsigned int vboHandle = 0;
-            unsigned int vaoHandle = 0;
-            unsigned int elementsHandle = 0;
-            bool disabled = false;
-
-            ~RendererData()
-            {
-                try
-                {
-                    if (renderer->vaoHandle) { glDeleteVertexArrays(1, &renderer->vaoHandle); }
-                    if (renderer->vboHandle) { glDeleteBuffers(1, &renderer->vboHandle); }
-                    if (renderer->elementsHandle) { glDeleteBuffers(1, &renderer->elementsHandle); }
-                }
-                catch (std::exception e1)
-                {
-                    MessageBox(0, e1.what(), 0, 0);
-                }
-
-                renderer->vaoHandle = renderer->vboHandle = renderer->elementsHandle = 0;
-                glDetachShader(renderer->shaderHandle, renderer->vertHandle);
-                glDeleteShader(renderer->vertHandle);
-                renderer->vertHandle = 0;
-                glDetachShader(renderer->shaderHandle, renderer->fragHandle);
-                glDeleteShader(renderer->fragHandle);
-                renderer->fragHandle = 0;
-                glDeleteProgram(renderer->shaderHandle);
-                renderer->shaderHandle = 0;
-            }
-        };
-
-        CLui(){}
-
-        static void RenderDrawList(ImDrawData* drawData);
-        static std::unique_ptr<RendererData> renderer;
-
 		void init();
         void renderUI();
-        void terminate();
         void SetDefaultStyle();
 	};
 }
